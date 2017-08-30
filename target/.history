@@ -1,0 +1,68 @@
+test:compile
+clean
+update
+compile
+test:compile
+update
+compile
+test:compile
+help
+all
+list
+completions "package"
+packagedArtifacts
+packageSrc
+ls
+help
+tasks
+update
+clean
+update
+compile
+test:compile
+test
+test:compile
+clean
+test:compile
+test
+last test:test
+test:compile
+run
+test
+last test:test
+sbt 'run-nobootcp store.BlockStoreTest'
+test
+last test test
+last test:test
+test
+test:compile
+test
+test:compile
+test
+test:compile
+clean
+package
+test:compile
+test
+last test:test
+test
+exit
+help
+tasks
+console
+clean
+sbt test
+test
+test:compile
+test
+clean
+test:compile
+test
+test:compile
+clean
+test:compile
+test
+test:compile
+compile
+update
+exit
