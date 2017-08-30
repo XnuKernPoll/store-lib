@@ -1,6 +1,0 @@
-package store 
-import org.scalatest.{FunSuite}
-
-class BlockStore extends FunSuite {
-  
-}
