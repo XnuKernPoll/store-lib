@@ -154,7 +154,22 @@ object Handlers {
 
   } } 
 
+  import Finagle.http.HttpMuxer
 
+  def Server(bm: BucketMap) = {
+
+    val kv = KV(bm)
+    val buckets = Buckets(bm)
+
+    val muxer = new HttpMuxer()
+      .withHandler("/api/v1/kv", kv)
+      .withHandler("/api/v1/kv/", kv)
+      .withHandler("/api/v1/buckets", buckets)
+      .withHandler("/api/v1/buckets/", buckets)
+
+
+    muxer
+  }
 
 
 }
