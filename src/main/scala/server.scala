@@ -3,17 +3,22 @@ package server
 
 import com.twitter.{util => Util, io => IO , finagle => Finagle} 
 import org.iq80.leveldb.Options
-import store.KV.BucketMap, store.BlockStore.Bucket, store.{util => store_util}
+import store.{util => store_util}, store._
 
-import scodec._, codecs._
+
 import scodec.bits._
+import scodec._, codecs.{list => listEncode, utf8}
 
-import Finagle.http.{Request, Response, Status}, Util.{Future, Try}
+import State._ 
+import Finagle.http.{Request, Response, Status, Method}, Util.{Future, Try}
 
 
 
-object BucketApi { 
+import Finagle.http.path._, Finagle.Service, Finagle.Failure
 
+object BucketApi {
+
+  import Ops._ 
   def create(buckets: BucketMap, bpath: String): Future[Response] = Future.const { BucketMap.mkBucket(buckets, bpath) }.map {b =>
     val r = Response(Status.Ok)
     r.setContentString(s"Added ${bpath} to store.")
@@ -28,17 +33,22 @@ object BucketApi {
   }
 
 
-  def list(buckets; BucketMap) = Future {
-    val k = buckets.keys
-    val pl = list(utf8).encode(k).toOption.map( bv => store_util.asBuf(bv.toByteArray) )
-    val rep = Response(Status.Ok)
-
-    pl match {
-      case Some(res) => rep.setContentString(res); Future(rep)
-      case None => Future.exception( Failure.rejected("couldn't marshal bucket names").asNonRetryable ) 
+  def list(buckets: BucketMap): Future[Response] = {
+    val k = buckets.keys.toList
+    val pl = listEncode(utf8).encode(k).toOption.map { data =>
+      store_util.BV.toBuf(data) 
     }
 
+    Future.const { store_util.optAsTry(pl) }.map { data =>
+      val rep = Response(Status.Ok)
+      rep.content(data); rep
+    }
+
+
+
   }
+
+
 
 }
 
@@ -46,13 +56,28 @@ object BucketApi {
 object kv_api {
   import IO.Buf.ByteArray.Shared
 
+  import Ops._, State._ 
+
   def list(bm: BucketMap, path: String) = {
-    Bucket.get(b, key)
-    store_util.optAsTry(b, key) 
+    def tx = (b: Bucket) => KV.list(b)
+
+    performOP(bm, path, tx).flatMap {d =>
+
+      val pl = store_util.optAsTry( listEncode(utf8).encode(d).toOption.map { data => store_util.BV.toBuf(data)  } )
+
+      Future.const {pl}.map { data =>
+        val rep = Response(Status.Ok)
+        rep.content(data); rep
+      }
+
+
+    }
+
+
   }
 
   def get(s: BucketMap, path: String, key: Array[Byte]) = {
-    val tx = (b: Bucket) =>  store_util.optAsTry(  Bucket.get(b, key) )
+    val tx = (b: Bucket) =>  store_util.optAsTry(  KV.get(b, key) )
 
     performOP(s, path, tx).map { d =>
       val rep = Response(Status.Ok) 
@@ -70,7 +95,7 @@ object kv_api {
 
 
   def put(bmap: BucketMap, path: String, key: Array[Byte], value: Array[Byte]) = {
-    val p = (b: Bucket) => { Bucket.put(b, key, value) }
+    val p = (b: Bucket) => { KV.put(b, key, value) }
 
     performOP(bmap, path, p).map { x =>
       val rep = Response( Status.Ok )
@@ -81,7 +106,7 @@ object kv_api {
 
 
   def delete(bmap: BucketMap, path: String, key: Array[Byte]) = {
-    val tx = (b: Bucket) => { Bucket.delete(b, key) }
+    val tx = (b: Bucket) => { KV.delete(b, key) }
     performOP(bmap, path, tx) map { d =>
       val rep = Response( Status.Ok )
       rep.setContentString( "key has been deleted" ); rep 
@@ -95,38 +120,29 @@ object kv_api {
 
 object Handlers {
 
-  /* 
-    TODO switch to their own endpoints 
-    Method   /api/v1/kv/:bucket 
-    Method /api/v1/buckets/:bucket 
-    
-   */
+  import IO.Buf.ByteArray.Shared
 
-
-
-  def KV(b: BucketMap) = Service[Request, Response].mk { req => (req.method, Path(req.path)  ) match {
+  def KV(bm: BucketMap) = Service.mk[Request, Response] { req => (req.method, Path(req.path)  ) match {
 
     //Delete 
-    case Method.Delete -> root / "api" / "v1" / "buckets" / b / k => kv_api.delete(bm, b, k.getBytes)
+    case Method.Delete -> root / "api" / "v1" / "kv" / b / k => kv_api.delete(bm, b, k.getBytes)
 
     //Put 
-    case Method.Put -> root / "api" / "v1" / "buckets" / b / k =>
+    case Method.Put -> root / "api" / "v1" / "kv" / b / k =>
       val v = Shared.extract( req.content )
-      kv_api.get(bm, b, k.getBytes, v) 
+      kv_api.put(bm, b, k.getBytes, v) 
 
     //Get 
     case Method.Get -> root / "api" / "v1" / "kv" / b / k  => kv_api.get(bm, b, k.getBytes)
 
 
     //List 
-    case Method.Get -> root / "api" / "v1" / "kv" /  b  => kv_api.list(bm)
+    case Method.Get -> root / "api" / "v1" / "kv" /  b  => kv_api.list(bm, b)
   } }
-}
 
-class ApiHandler(bm: BucketMap) extends Service[Request, Response] {
-  import IO.Buf.ByteArray.Shared
+   
 
-  def apply(req: Request) = (req.method, Path(req.path)) match {
+  def Buckets(bm: BucketMap) = Service.mk[Request, Response] { req => (req.method, Path(req.path) ) match {
 
     case Method.Post -> root / "api" / "v1" /  "buckets" =>
       val p = req.contentString
@@ -136,5 +152,10 @@ class ApiHandler(bm: BucketMap) extends Service[Request, Response] {
 
     case Method.Delete -> root / "api" / "v1" / "buckets" / p => BucketApi.delete(bm, p)
 
-  }
+  } } 
+
+
+
+
 }
+

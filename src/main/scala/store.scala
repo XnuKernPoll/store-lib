@@ -6,6 +6,9 @@ import com.twitter.util.{Try, Return}
 import org.iq80.leveldb._
 
 
+import scala.annotation.tailrec
+
+
 import org.fusesource.leveldbjni.JniDBFactory._
 
 //add write ahead cache
@@ -33,13 +36,14 @@ object util {
  
 
   object BV {
-    def fromBuf(buf: Buf) = ( Buf.ByteArray.Shared.extract(buf) ) andThen (b => BitVector(b) ) 
+    def fromBuf(buf: Buf) = ( Buf.ByteArray.Shared.extract(buf) ) andThen (b => BitVector(b) )
+    def toBuf(buf: BitVector)  = asBuf( buf.toByteArray ) 
   }
 
 
 }
 
-object BlockStore {
+object Ops {
 
   import java.nio.file.{Files => FileModule, Paths}
   import java.io.File, com.google.common.io.Files
@@ -47,7 +51,10 @@ object BlockStore {
   case class Bucket(path: String, db: DB, opts: Options )
 
 
-  object Bucket { 
+  object Bucket {
+
+
+
 
     def make(path: String, opt: Options): Try[Bucket] = Try {
       val fp = new File(path)
@@ -57,24 +64,45 @@ object BlockStore {
     }
 
     def destroy(bckt: Bucket): Try[Unit] = Try {  bckt.db.close(); factory.destroy(new File(bckt.path), bckt.opts ) } 
-    
-
-    def get(b: Bucket, key: Array[Byte]) = Try { b.db.get(key) }.toOption
-
-    def put(b: Bucket, key: Array[Byte], value: Array[Byte] ) = Try { b.db.put(key, value) }
-
-    def delete(b: Bucket, key: Array[Byte]) = Try { b.db.delete(key) }
 
   }
 
 
+
+
+  object KV {
+    
+
+    def get(b: Bucket, key: Array[Byte]) = Try { b.db.get(key) }.toOption
+
+
+    def put(b: Bucket, key: Array[Byte], value: Array[Byte] ) = Try { b.db.put(key, value) }
+
+
+    def delete(b: Bucket, key: Array[Byte]) = Try { b.db.delete(key) }
+
+    def list(b: Bucket) = {
+      val iter = b.db.iterator()
+      iter.seekToFirst()
+
+      @tailrec def populate(i: DBIterator, keys: List[String]): List[String] = {
+        val key = asString( i.next().getKey() ).toString 
+        val ukeys = (keys :+ key ).toList
+        if ( iter.hasNext() ) populate(i, ukeys) else {i.close() ; ukeys} 
+      }
+
+      Try { populate(iter, List[String]() ) } 
+    }
+
+  }
+
 }
 
 
-object KV {
+object State { 
 
+  import Ops._
   import scala.collection.concurrent.TrieMap
-  import BlockStore.Bucket
 
   type BucketMap = TrieMap[String, Bucket]
 
