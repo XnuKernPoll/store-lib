@@ -53,7 +53,8 @@ object util {
 
 }
 
- object Ops {
+
+object Ops {
 
   import java.nio.file.{Files => FileModule, Paths}
   import java.io.File, com.google.common.io.Files
