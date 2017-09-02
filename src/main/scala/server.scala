@@ -31,19 +31,13 @@ object BucketApi {
   }
 
 
-  def list(buckets: BucketMap): Future[Response] = {
+  def list(buckets: BucketMap): Future[Response] = Future {
     val k = buckets.keys.toList
-    val pl = listEncode(utf8).encode(k).toOption.map { data =>
-      store_util.BV.toBuf(data) 
-    }
+    val pl = k.mkString(",")
 
-    Future.const { store_util.optAsTry(pl) }.map { data =>
-      val rep = Response(Status.Ok)
-      rep.content(data); rep
-    }
-
-
-
+    val rep = Response(Status.Ok)
+    rep.setContentString(pl); rep
+ 
   }
 
 
@@ -59,18 +53,11 @@ object kv_api {
   def list(bm: BucketMap, path: String) = {
     def tx = (b: Bucket) => KV.list(b)
 
-    performOP(bm, path, tx).flatMap {d =>
-
-      val pl = store_util.optAsTry( listEncode(utf8).encode(d).toOption.map { data => store_util.BV.toBuf(data)  } )
-
-      Future.const {pl}.map { data =>
-        val rep = Response(Status.Ok)
-        rep.content(data); rep
-      }
-
-
+    performOP(bm, path, tx).map { l =>
+      val pl = l.mkString(",") 
+      val response = Response(Status.Ok)
+      response.setContentString(pl); response
     }
-
 
   }
 
@@ -120,7 +107,13 @@ object Handlers {
 
   import IO.Buf.ByteArray.Shared
 
-  case class Resources(bm: BucketMap, pool: FuturePool = defaultPool)
+  case class Resources(bm: BucketMap, pool: FuturePool)
+
+
+  object Resources {
+    def zero: Resources = Resources(new BucketMap(), defaultPool)
+  }
+
 
   def defaultPool = {
     val fjp = new ForkJoinPool(6) 
@@ -137,14 +130,17 @@ object Handlers {
     //Put 
     case Method.Put -> root / "api" / "v1" / "kv" / b / k =>
       val v = Shared.extract( req.content )
-      kv_api.put(bm, b, k.getBytes, v) 
+      kv_api.put(bm, b, k.getBytes, v)
+
+     //list
+    case Method.Get -> root / "api" / "v1" / "kv" / b => kv_api.list(bm, b)
 
     //Get 
     case Method.Get -> root / "api" / "v1" / "kv" / b / k  => kv_api.get(bm, b, k.getBytes)
 
 
     //List 
-    case Method.Get -> root / "api" / "v1" / "kv" /  b  => kv_api.list(bm, b)
+
   } }
 
    
@@ -169,7 +165,6 @@ object Handlers {
     val buckets = Buckets(r)
 
     val muxer = new HttpMuxer()
-      .withHandler("/api/v1/kv", kv)
       .withHandler("/api/v1/kv/", kv)
       .withHandler("/api/v1/buckets", buckets)
       .withHandler("/api/v1/buckets/", buckets)

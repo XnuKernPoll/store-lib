@@ -57,7 +57,7 @@ class OpsSuite extends FunSuite {
     val op = Bucket.destroy(b)
     Await.result( op )
     assert { assertFuture(op) }
-
-    
+    assert { (new File("pals") ).exists() != true }  
   }
+ 
 }

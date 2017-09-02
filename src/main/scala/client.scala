@@ -1,4 +1,4 @@
-package access 
+package client 
 import scodec._, scodec.bits._, codecs.{list => lcodec, utf8}
 
 import com.twitter.util.{Future, Try}
@@ -33,7 +33,7 @@ object StringDict {
       Future.const(payload).map { data =>
         val buf = BV.toBuf(data)
         //sanitize later
-        val r = Request(Method.Put, (prefix + s"/$b/$key" ) )
+        val r = Request(Method.Put, (prefix + s"$b/$key" ) )
         r.content(buf); r
       }.flatMap { req =>
         conn(req).map(rep => () )
@@ -44,7 +44,7 @@ object StringDict {
 
 
     def get(key: String): Future[V] = {
-      val path = prefix + s"/$b/$key"
+      val path = prefix + s"$b/$key"
       val req = Request( Method.Get, path )
 
       conn(req).map {rep =>
@@ -58,29 +58,50 @@ object StringDict {
 
 
     def delete(key: String): Future[Unit] = {
-      val path = prefix + s"/$b/$key"
+      val path = prefix + s"$b/$key"
       val req = Request( Method.Delete, path)
       conn(req).map( r => () )
     }
 
 
     def list: Future[List[String]] = {
-      val path = prefix + s"/$b"
-      val req = Request(Method.Get, b)
+      val path = prefix + s"$b"
+      val req = Request(Method.Get, path)
       conn(req).map {rep =>
-        val buf = BV.fromBuf(  rep.content )
-        lcodec( utf8 ).decode(buf).toOption.map(x => x.value).get   
+        ( rep.contentString.split(",") ).toList
       }
     }
 
+  }
 
- 
 
-    
+  class BucketApi(conn: Service[Request, Response] ) {
+
+    val prefix =  "/api/v1/buckets/"
+    val base = prefix.dropRight(1)
+
+    def list: Future[List[String]] = {
+      val req = Request(Method.Get, base)
+      conn(req).map {rep =>
+        ( rep.contentString.split(",") ).toList
+      }
+
+    }
+
+
+    def delete(b: String) = {
+      val req = Request( Method.Delete, prefix + b)
+      conn(req).map {rep => () } 
+    }
+
+    def create(b: String) = {
+      val req = Request(Method.Post, base)
+      req.setContentString(b) 
+      conn(req).map {rep => () }
+    }
 
 
   }
-
 
 
 } 

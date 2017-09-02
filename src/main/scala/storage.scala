@@ -99,6 +99,7 @@ object Ops {
       @tailrec def populate(i: DBIterator, keys: List[String]): Future[ List[String] ]  = {
         val key = asString( i.next().getKey() ).toString 
         val ukeys = (keys :+ key ).toList
+        
         if ( iter.hasNext() ) populate(i, ukeys) else {
           synchronized { i.close() }
           Future( ukeys )
