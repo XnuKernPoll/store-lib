@@ -1,8 +1,8 @@
-package store_lib 
-import server.Handlers._
+package store_lib
+import store_lib.server.Handlers._
 import client._
 import org.scalatest._
-import storage.State.BucketMap
+import store_lib.storage.State.BucketMap
 import scodec._, codecs.{utf8}
 import com.twitter.util._
 
@@ -31,6 +31,8 @@ class svcSuite extends FunSuite {
   test ("Put and Get") {
     val canadians = "I am not yo buddeh fwend, eat me guy"
     val p = kvAPI.put("arguing", canadians)
+    val g = Await.result( kvAPI.get("arguing") )
+    assert(g == canadians) 
   }
 
 

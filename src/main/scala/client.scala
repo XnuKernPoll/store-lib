@@ -4,7 +4,7 @@ import scodec._, scodec.bits._, codecs.{list => lcodec, utf8}
 import com.twitter.util.{Future, Try}
 trait Store[K, V]
 
-import storage._ 
+import store_lib.storage._ 
 import Ops._
 
 

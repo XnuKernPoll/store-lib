@@ -3,7 +3,7 @@ package store_lib.server
 import com.twitter.{util => Util, io => IO , finagle => Finagle} 
 import org.iq80.leveldb.Options
 
-import storage.{util => store_util}, storage._
+import store_lib.storage.{util => store_util}, store_lib.storage._
 import scodec.bits._
 import scodec._, codecs.{list => listEncode, utf8}
 
