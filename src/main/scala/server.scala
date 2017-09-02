@@ -14,6 +14,10 @@ import java.util.concurrent.{ForkJoinPool}, Util.{FuturePool, ExecutorServiceFut
 
 import Finagle.http.path._, Finagle.Service, Finagle.Failure
 
+/** 
+  Bucket API endpoint functions 
+*/
+
 object BucketApi {
 
   import Ops._ 
@@ -44,7 +48,7 @@ object BucketApi {
 
 }
 
-
+/** KV api endpoint functions */
 object kv_api {
   import IO.Buf.ByteArray.Shared
 
@@ -102,7 +106,7 @@ object kv_api {
 }
 
 
-
+/**  Resource management fns, and Handlers for the ( KV , Bucket) endpoints, and the full server */ 
 object Handlers {
 
   import IO.Buf.ByteArray.Shared

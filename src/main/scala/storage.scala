@@ -61,7 +61,7 @@ object Ops {
 
   case class Bucket(path: String, db: DB, pool: FuturePool, opts: Options )
 
-
+  /** Buckets, are isolated leveldb instances. */
   object Bucket {
 
 
@@ -79,6 +79,10 @@ object Ops {
   }
 
 
+
+  /* 
+    Wrapper around leveldb, apart from the list function right now, it's intended for you to serialize various types for it's K -V.  
+  */
 
 
   object KV {
@@ -116,12 +120,20 @@ object Ops {
 }
 
 
+/**
+ 
+Server Side state, to be used by servers, to provide certain abstractions, and control features, right now it only has one module thee will be more . 
+*/
+
 object State { 
 
   import Ops._
   import scala.collection.concurrent.TrieMap
 
   type BucketMap = TrieMap[String, Bucket]
+
+  /** Gives you a bucket api can be built upon to provide, branches or virtual envs. */
+
 
 
   object BucketMap {

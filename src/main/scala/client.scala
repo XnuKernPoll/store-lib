@@ -7,12 +7,29 @@ trait Store[K, V]
 import storage._ 
 import Ops._
 
+
+/**
+  A signature for clients with a KV api 
+
+  Clients can use services locally, and you can control how many concurrent local and remote servers, you want to use, and  manage what thread and state resources your servers use. 
+*/
+
 trait SimpleKV[K, V] {
   def get(k: K): Future[V]
   def put(k: K, v: V): Future[Unit]
   def delete(k: K): Future[Unit]
   def list: Future[List[K]]
 }
+
+
+
+/**
+ 
+  Two api clients, for the basic Bucket -> String -> V Rest APIs. 
+
+  Remember this can be done remotely or localy, and it's easy to switch to other protocols, see finagle and twitter util for more details. 
+  
+*/
 
 
 object StringDict { 
