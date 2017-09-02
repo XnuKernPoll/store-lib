@@ -1,8 +1,16 @@
 scalaVersion := "2.11.8"
 
+organization := "XnuKernPoll.github.io"
+
+name := "store_lib"
+
+version := "0.3"
+
+
 libraryDependencies ++= Seq(
   "org.fusesource.leveldbjni" % "leveldbjni-all" % "1.8"
 )
+
 
 
 libraryDependencies ++= Seq (
