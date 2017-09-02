@@ -1,6 +1,7 @@
+package store_lib
 
-package storage
 
+import storage._ 
 import org.scalatest.{FunSuite}
 import java.io.File
 import com.twitter.util._

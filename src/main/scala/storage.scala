@@ -1,4 +1,4 @@
-package storage
+package store_lib.storage
 import scodec._
 import scodec.bits._, codecs._
 

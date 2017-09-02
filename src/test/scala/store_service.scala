@@ -1,3 +1,4 @@
+package store_lib 
 import server.Handlers._
 import client._
 import org.scalatest._

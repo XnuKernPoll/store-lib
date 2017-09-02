@@ -1,4 +1,4 @@
-package server
+package store_lib.server
 
 import com.twitter.{util => Util, io => IO , finagle => Finagle} 
 import org.iq80.leveldb.Options

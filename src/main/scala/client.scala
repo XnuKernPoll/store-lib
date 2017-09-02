@@ -1,4 +1,4 @@
-package client 
+package store_lib.client 
 import scodec._, scodec.bits._, codecs.{list => lcodec, utf8}
 
 import com.twitter.util.{Future, Try}
